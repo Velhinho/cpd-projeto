@@ -23,8 +23,9 @@ matrix_t *make_matrix_from_file(FILE *fp) {
   matrix_t *matrix = matrix_create(num_cities, num_cities, -1);
 
   for(int i = 0; i < num_roads; i++) {
-    int row, column, cost;
-    fscanf(fp, "%d %d %d", &row, &column, &cost);
+    int row, column;
+    double cost;
+    fscanf(fp, "%d %d %lf", &row, &column, &cost);
     matrix_set(matrix, row, column, cost);
   }
   return matrix;

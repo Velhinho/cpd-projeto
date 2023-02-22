@@ -6,7 +6,7 @@ struct matrix {
   int **matrix_elements;
 };
 
-matrix_t *matrix_create(int rows, int columns, int default_val) {
+matrix_t *matrix_create(int rows, int columns, distance_t default_val) {
   matrix_t *matrix = (matrix_t *) malloc(sizeof(matrix_t));
   matrix->num_columns = columns;
   matrix->num_rows = rows;
@@ -34,11 +34,11 @@ void matrix_free(matrix_t *matrix) {
   free(matrix);
 }
 
-int matrix_get(matrix_t *matrix, int row, int column) {
+distance_t matrix_get(matrix_t *matrix, int row, int column) {
   return matrix->matrix_elements[row][column];
 }
 
-void matrix_set(matrix_t *matrix, int row, int column, int value) {
+void matrix_set(matrix_t *matrix, int row, int column, distance_t value) {
   matrix->matrix_elements[row][column] = value;
 }
 
@@ -53,7 +53,7 @@ int matrix_num_columns(matrix_t *matrix) {
 void matrix_print(matrix_t *matrix) {
   for (int i = 0; i < matrix_num_rows(matrix); i++) {
     for (int j = 0; j < matrix_num_columns(matrix); j++) {
-      printf("%d %d %d\n", i, j, matrix_get(matrix, i, j));
+      printf("%d %d %f\n", i, j, matrix_get(matrix, i, j));
     }
   }
 }
