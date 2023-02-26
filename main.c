@@ -47,9 +47,11 @@ matrix_t *make_matrix_from_file(FILE *fp) {
   return matrix;
 }
 
+distance_t worst_cost;
+
 void min(matrix_t *distances, int node, distance_t *mins) {
-  mins[0] = 99999999;
-  mins[1] = 99999999;
+  mins[0] = worst_cost;
+  mins[1] = worst_cost;
   for (int i = 0; i < matrix_num_columns(distances); i++) {
     distance_t cost = matrix_get(distances, node, i);
     if (cost < mins[0] && cost > 0) {
@@ -104,15 +106,27 @@ distance_t calculate_new_bound(matrix_t *distances, distance_t lb, int f, int t)
 }
 
 int *make_tour(int size) {
-  return (int *) malloc(sizeof(int) * size);
+  int *tour = (int *) malloc(sizeof(int) * size);
+  for (int i = 0; i < size; i++) {
+    tour[i] = -1;
+  }
+  return tour;
 }
 
-int *copy_tour(int *tour, int length) {
-  int *new_tour = make_tour(length);
-  for (int i = 0; i < length; i++) {
+int *copy_tour(int *tour, int size) {
+  int *new_tour = make_tour(size);
+  for (int i = 0; i < size; i++) {
     new_tour[i] = tour[i];
   }
+
   return new_tour;
+}
+
+void print_tour(int *tour, int size) {
+  for(int i = 0; i < size; i++) {
+    printf("%d ", tour[i]);
+  }
+  printf("\n");
 }
 
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
@@ -125,11 +139,11 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   queue_push(queue, (void *) elem);
 
   while (queue->size > 0) {
-    queue_elem_t *elem = queue_pop(queue);
+    queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
     if (elem->bound >= best_tour_cost) {
       tsp_ret_t ret;
       ret.best_tour = best_tour;
-      ret.best_tour_cost = -1;
+      ret.best_tour_cost = best_tour_cost;
       return ret;
     }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
@@ -139,20 +153,19 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
         best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
       }
     } else {
-      for (int i = 0; i < N;  i++) {
-        int cost = matrix_get(distances, elem->node, i);
-        if (!contains(elem->tour, elem->length, cost) && cost != -1) {
+      for (int v = 0; v < N;  v++) {
+        int cost = matrix_get(distances, elem->node, v);
+        if (contains(elem->tour, elem->length, v) || cost == -1) {
           continue;
         }
-        distance_t new_bound = calculate_new_bound(distances, elem->bound, elem->node, i);
+        distance_t new_bound = calculate_new_bound(distances, elem->bound, elem->node, v);
         if (new_bound > best_tour_cost) {
           continue;
         }
-        int *new_tour = copy_tour(elem->tour, elem->length);
-        new_tour[elem->length] = i;
-        distance_t new_cost = elem->cost + matrix_get(distances, elem->node, i);
-        queue_elem_t *new_elem = queue_elem_create(new_tour, new_cost, new_bound, elem->length + 1, i);
-        printf("bound %lf node %d\n", new_elem->bound, new_elem->node);
+        int *new_tour = copy_tour(elem->tour, N + 1);
+        new_tour[elem->length] = v;
+        distance_t new_cost = elem->cost + matrix_get(distances, elem->node, v);
+        queue_elem_t *new_elem = queue_elem_create(new_tour, new_cost, new_bound, elem->length + 1, v);
         queue_push(queue, (void *) new_elem);
       }
     }
@@ -160,12 +173,6 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   tsp_ret_t ret;
   ret.best_tour = best_tour;
   ret.best_tour_cost = best_tour_cost;
-
-  for (int i = 0; i < matrix_num_columns(distances); i++) {
-    printf("%d ", ret.best_tour[i]);
-  }
-  printf("%lf\n", ret.best_tour_cost);
-
   return ret;
 }
 
@@ -176,9 +183,12 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
   distance_t best_tour_cost = atof(argv[2]);
+  worst_cost = best_tour_cost;
   FILE *fp = fopen(argv[1], "r");
   matrix_t *distances = make_matrix_from_file(fp);
   tsp_ret_t ret = tspbb(distances, matrix_num_columns(distances), best_tour_cost);
+  printf("%lf\n", ret.best_tour_cost);
+  print_tour(ret.best_tour, matrix_num_columns(distances) + 1);
   matrix_free(distances);
   fclose(fp);
 }
