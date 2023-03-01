@@ -3,6 +3,7 @@
 #include "matrix.h"
 #include "list.h"
 #include "nqueue/queue.h"
+#include "tour.h"
 
 typedef struct {
   int *best_tour;
@@ -29,6 +30,12 @@ queue_elem_t *queue_elem_create(int *tour, distance_t cost, distance_t bound, in
 
 void free_queue_elem(queue_elem_t *elem) {
   free(elem);
+}
+
+void queue_elem_print(queue_elem_t *elem) {
+  printf("queue_elem(tour ");
+  tour_print(elem->tour, elem->length);
+  printf(", cost %lf, bound %lf, length %d, node %d)", elem->cost, elem->bound, elem->length, elem->node);
 }
 
 matrix_t *make_matrix_from_file(FILE *fp) {
@@ -87,15 +94,6 @@ char cmp_lb(void *queue_elem1, void *queue_elem2) {
   }
 }
 
-int contains(int *tour, int length, int node) {
-  for (int i = 0; i < length; i++) {
-    if (tour[i] == node) {
-      return 1;
-    }
-  }
-  return 0;
-}
-
 distance_t calculate_new_bound(matrix_t *distances, distance_t lb, int f, int t) {
   distance_t mins[2];
   min(distances, f, mins);
@@ -103,30 +101,6 @@ distance_t calculate_new_bound(matrix_t *distances, distance_t lb, int f, int t)
   min(distances, t, mins);
   distance_t ct = matrix_get(distances, f, t) >= mins[1] ? mins[1]: mins[0];
   return lb + matrix_get(distances, f, t) - (cf + ct) / 2;
-}
-
-int *make_tour(int size) {
-  int *tour = (int *) malloc(sizeof(int) * size);
-  for (int i = 0; i < size; i++) {
-    tour[i] = -1;
-  }
-  return tour;
-}
-
-int *copy_tour(int *tour, int size) {
-  int *new_tour = make_tour(size);
-  for (int i = 0; i < size; i++) {
-    new_tour[i] = tour[i];
-  }
-
-  return new_tour;
-}
-
-void print_tour(int *tour, int size) {
-  for(int i = 0; i < size; i++) {
-    printf("%d ", tour[i]);
-  }
-  printf("\n");
 }
 
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
@@ -140,6 +114,8 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
 
   while (queue->size > 0) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
+    //queue_elem_print(elem);
+    //printf("\n");
     if (elem->bound >= best_tour_cost) {
       tsp_ret_t ret;
       ret.best_tour = best_tour;
@@ -177,18 +153,21 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
 }
 
 int main(int argc, char **argv) {
-  if (argc < 2) {
+  if (argc < 3) {
     fprintf(stderr, "too few arguments\n");
-    fprintf(stderr, "USAGE: ./tsp <matrix.in>\n");
+    fprintf(stderr, "USAGE: ./tsp <matrix.in> best_cost\n");
     exit(EXIT_FAILURE);
   }
   distance_t best_tour_cost = atof(argv[2]);
   worst_cost = best_tour_cost;
   FILE *fp = fopen(argv[1], "r");
   matrix_t *distances = make_matrix_from_file(fp);
+
   tsp_ret_t ret = tspbb(distances, matrix_num_columns(distances), best_tour_cost);
   printf("%lf\n", ret.best_tour_cost);
-  print_tour(ret.best_tour, matrix_num_columns(distances) + 1);
+  tour_print(ret.best_tour, matrix_num_columns(distances) + 1);
+  printf("\n");
+
   matrix_free(distances);
   fclose(fp);
 }

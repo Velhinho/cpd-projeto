@@ -3,7 +3,7 @@
 struct matrix {
   int num_rows;
   int num_columns;
-  int **matrix_elements;
+  distance_t **matrix_elements;
 };
 
 matrix_t *matrix_create(int rows, int columns, distance_t default_val) {
@@ -12,9 +12,9 @@ matrix_t *matrix_create(int rows, int columns, distance_t default_val) {
   matrix->num_rows = rows;
 
   // allocate row in the matrix
-  matrix->matrix_elements = (int **) calloc(rows, sizeof(int *));
+  matrix->matrix_elements = (distance_t **) calloc(rows, sizeof(distance_t *));
   for (int i = 0; i < rows; i++) {
-    matrix->matrix_elements[i] = (int *) calloc(columns, sizeof(int));
+    matrix->matrix_elements[i] = (distance_t *) calloc(columns, sizeof(distance_t));
   }
 
   // initialize matrix values
