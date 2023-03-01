@@ -28,10 +28,6 @@ queue_elem_t *queue_elem_create(int *tour, distance_t cost, distance_t bound, in
   return elem;
 }
 
-void free_queue_elem(queue_elem_t *elem) {
-  free(elem);
-}
-
 void queue_elem_print(queue_elem_t *elem) {
   printf("queue_elem(tour ");
   tour_print(elem->tour, elem->length);
@@ -103,6 +99,15 @@ distance_t calculate_new_bound(matrix_t *distances, distance_t lb, int f, int t)
   return lb + matrix_get(distances, f, t) - (cf + ct) / 2;
 }
 
+void queue_delete_all(priority_queue_t *queue) {
+  while (queue->size != 0) {
+    queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
+    free(elem->tour);
+    free(elem);
+  }
+  queue_delete(queue);
+}
+
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   int *tour = make_tour(N + 1);
   int *best_tour = NULL;
@@ -120,11 +125,12 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
       tsp_ret_t ret;
       ret.best_tour = best_tour;
       ret.best_tour_cost = best_tour_cost;
+      queue_delete_all(queue);
       return ret;
     }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
       if (elem->cost + matrix_get(distances, elem->node, 0) < best_tour_cost) {
-        best_tour = elem->tour;
+        best_tour = copy_tour(elem->tour, N + 1);
         best_tour[N] = 0;
         best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
       }
@@ -145,10 +151,13 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
         queue_push(queue, (void *) new_elem);
       }
     }
+    free(elem->tour);
+    free(elem);
   }
   tsp_ret_t ret;
   ret.best_tour = best_tour;
   ret.best_tour_cost = best_tour_cost;
+  queue_delete_all(queue);
   return ret;
 }
 
@@ -168,6 +177,7 @@ int main(int argc, char **argv) {
   tour_print(ret.best_tour, matrix_num_columns(distances) + 1);
   printf("\n");
 
+  free(ret.best_tour);
   matrix_free(distances);
   fclose(fp);
 }
