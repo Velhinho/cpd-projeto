@@ -3,23 +3,22 @@
 #include "matrix.h"
 #include "list.h"
 #include "nqueue/queue.h"
-#include "tour.h"
 #include <omp.h>
 
 typedef struct {
-  int *best_tour;
+  list_t *best_tour;
   distance_t best_tour_cost;
 } tsp_ret_t;
 
 typedef struct {
-  int *tour;
+  list_t *tour;
   distance_t cost;
   distance_t bound;
   int length;
   int node;
 } queue_elem_t;
 
-queue_elem_t *queue_elem_create(int *tour, distance_t cost, distance_t bound, int length, int node) {
+queue_elem_t *queue_elem_create(list_t *tour, distance_t cost, distance_t bound, int length, int node) {
   queue_elem_t *elem = (queue_elem_t *) malloc(sizeof(queue_elem_t));
   elem->tour = tour;
   elem->cost = cost;
@@ -31,8 +30,14 @@ queue_elem_t *queue_elem_create(int *tour, distance_t cost, distance_t bound, in
 
 void queue_elem_print(queue_elem_t *elem) {
   printf("queue_elem(tour ");
-  tour_print(elem->tour, elem->length);
+  list_print(elem->tour);
   printf(", cost %lf, bound %lf, length %d, node %d)", elem->cost, elem->bound, elem->length, elem->node);
+  printf("\n");
+}
+
+void queue_elem_free(queue_elem_t *elem) {
+  list_free(elem->tour);
+  free(elem);
 }
 
 matrix_t *make_matrix_from_file(FILE *fp) {
@@ -111,16 +116,15 @@ distance_t calculate_new_bound(matrix_t *distances, distance_t lb, int f, int t)
 void queue_delete_all(priority_queue_t *queue) {
   while (queue->size != 0) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
-    free(elem->tour);
-    free(elem);
+    queue_elem_free(elem);
   }
   queue_delete(queue);
 }
 
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
-  int *tour = make_tour(N + 1);
-  int *best_tour = NULL;
-  tour[0] = 0;
+  list_t *tour = list_empty();
+  list_t *best_tour = list_empty();
+  list_insert(tour, 0);
   distance_t lb = initial_lower_bound(distances);
   priority_queue_t *queue = queue_create(cmp_lb);
   queue_elem_t *elem = queue_elem_create(tour, 0, lb, 1, 0);
@@ -131,48 +135,52 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     //queue_elem_print(elem);
     //printf("\n");
     if (elem->bound >= best_tour_cost) {
-      tsp_ret_t ret;
-      ret.best_tour = best_tour;
-      ret.best_tour_cost = best_tour_cost;
+      tsp_ret_t ret = { best_tour, best_tour_cost };
+      queue_elem_free(elem);
       queue_delete_all(queue);
-      free(elem->tour);
-      free(elem);
       return ret;
     }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
       if (elem->cost + matrix_get(distances, elem->node, 0) < best_tour_cost) {
-        if (best_tour != NULL) {
-          free(best_tour);
-        }
-        best_tour = copy_tour(elem->tour, N + 1);
-        best_tour[N] = 0;
+        list_free(best_tour);
+        best_tour = list_append(elem->tour, 0);
         best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
       }
     } else {
       for (int v = 0; v < N;  v++) {
         int cost = matrix_get(distances, elem->node, v);
-        if (contains(elem->tour, elem->length, v) || cost == -1) {
+        if (list_contains(elem->tour, v) || cost == -1) {
           continue;
         }
         distance_t new_bound = calculate_new_bound(distances, elem->bound, elem->node, v);
         if (new_bound > best_tour_cost) {
           continue;
         }
-        int *new_tour = copy_tour(elem->tour, N + 1);
-        new_tour[elem->length] = v;
+        list_t *new_tour = list_append(elem->tour, v);
         distance_t new_cost = elem->cost + matrix_get(distances, elem->node, v);
         queue_elem_t *new_elem = queue_elem_create(new_tour, new_cost, new_bound, elem->length + 1, v);
         queue_push(queue, (void *) new_elem);
       }
     }
-    free(elem->tour);
-    free(elem);
+    queue_elem_free(elem);
   }
-  tsp_ret_t ret;
-  ret.best_tour = best_tour;
-  ret.best_tour_cost = best_tour_cost;
+  tsp_ret_t ret = { best_tour, best_tour_cost };
   queue_delete_all(queue);
   return ret;
+}
+
+list_t *rtz_init(matrix_t *distances) {
+  list_t *rtz = list_empty();
+  int num_columns = matrix_num_columns(distances);
+  for (int i = 0; i < num_columns; i++) {
+    double elem = matrix_get(distances, 0, i);
+    if (elem == -1) {
+      list_insert(rtz, 0);
+    } else {
+      list_insert(rtz, 1);
+    }
+  }
+  return rtz;
 }
 
 int main(int argc, char **argv) {
@@ -192,14 +200,13 @@ int main(int argc, char **argv) {
   exec_time += omp_get_wtime();
   fprintf(stderr, "%.lfs\n", exec_time);
 
-  if (ret.best_tour == NULL || tour_size(ret.best_tour, n + 1) != n + 1) {
+  if (ret.best_tour == NULL || list_count(ret.best_tour) != n + 1) {
     printf("NO SOLUTION\n");
   } else {
     printf("%lf\n", ret.best_tour_cost);
-    tour_print(ret.best_tour, matrix_num_columns(distances) + 1);
-    printf("\n");
+    list_print(ret.best_tour);
   }
-  free(ret.best_tour);
+  list_free(ret.best_tour);
   matrix_free(distances);
   fclose(fp);
 }
