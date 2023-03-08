@@ -6,6 +6,7 @@
 
 int *make_tour(int size);
 int *copy_tour(int *tour, int size);
+int tour_size(int *tour, int size);
 int contains(int *tour, int length, int node);
 void tour_print(int *tour, int size);
 

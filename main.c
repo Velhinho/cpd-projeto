@@ -4,6 +4,7 @@
 #include "list.h"
 #include "nqueue/queue.h"
 #include "tour.h"
+#include <omp.h>
 
 typedef struct {
   int *best_tour;
@@ -171,12 +172,20 @@ int main(int argc, char **argv) {
   worst_cost = best_tour_cost;
   FILE *fp = fopen(argv[1], "r");
   matrix_t *distances = make_matrix_from_file(fp);
+  int n = matrix_num_columns(distances);
 
-  tsp_ret_t ret = tspbb(distances, matrix_num_columns(distances), best_tour_cost);
-  printf("%lf\n", ret.best_tour_cost);
-  tour_print(ret.best_tour, matrix_num_columns(distances) + 1);
-  printf("\n");
+  double exec_time = -omp_get_wtime();
+  tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
+  exec_time += omp_get_wtime();
+  fprintf(stderr, "%.lfs\n", exec_time);
 
+  if (ret.best_tour == NULL || tour_size(ret.best_tour, n + 1) != n + 1) {
+    printf("NO SOLUTION\n");
+  } else {
+    printf("%lf\n", ret.best_tour_cost);
+    tour_print(ret.best_tour, matrix_num_columns(distances) + 1);
+    printf("\n");
+  }
   free(ret.best_tour);
   matrix_free(distances);
   fclose(fp);

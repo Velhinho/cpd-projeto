@@ -1,7 +1,7 @@
 cc = gcc -Wall -Wextra
 
 main: matrix.o queue.o tour.o
-	$(cc) main.c matrix.o queue.o tour.o -g -o tsp
+	$(cc) main.c matrix.o queue.o tour.o -g -fopenmp -o tsp
 
 queue.o:
 	$(cc) nqueue/queue.c nqueue/queue.h -c

@@ -17,6 +17,15 @@ int *copy_tour(int *tour, int size) {
   return new_tour;
 }
 
+int tour_size(int *tour, int size) {
+  int i;
+  for(i = 0; i < size; i++) {
+    if (tour[i] == -1)
+      break;
+  }
+  return i;
+}
+
 int contains(int *tour, int length, int node) {
   for (int i = 0; i < length; i++) {
     if (tour[i] == node) {
