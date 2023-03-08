@@ -37,14 +37,22 @@ void queue_elem_print(queue_elem_t *elem) {
 
 matrix_t *make_matrix_from_file(FILE *fp) {
   int num_cities, num_roads;
-  fscanf(fp, "%d %d", &num_cities, &num_roads);
+  int n = fscanf(fp, "%d %d", &num_cities, &num_roads);
+  if (n < 2) {
+    fprintf(stderr, "error reading file\n");
+    exit(-1);
+  }
 
   matrix_t *matrix = matrix_create(num_cities, num_cities, -1);
 
   for(int i = 0; i < num_roads; i++) {
     int row, column;
     double cost;
-    fscanf(fp, "%d %d %lf", &row, &column, &cost);
+    int n = fscanf(fp, "%d %d %lf", &row, &column, &cost);
+    if (n < 3) {
+      fprintf(stderr, "error reading file\n");
+      exit(-1);
+    }
     matrix_set(matrix, row, column, cost);
     matrix_set(matrix, column, row, cost);
   }
@@ -127,10 +135,15 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
       ret.best_tour = best_tour;
       ret.best_tour_cost = best_tour_cost;
       queue_delete_all(queue);
+      free(elem->tour);
+      free(elem);
       return ret;
     }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
       if (elem->cost + matrix_get(distances, elem->node, 0) < best_tour_cost) {
+        if (best_tour != NULL) {
+          free(best_tour);
+        }
         best_tour = copy_tour(elem->tour, N + 1);
         best_tour[N] = 0;
         best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);

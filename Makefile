@@ -1,4 +1,4 @@
-cc = gcc -Wall -Wextra
+cc = gcc -Wall -Wextra -O3
 
 main: matrix.o queue.o tour.o
 	$(cc) main.c matrix.o queue.o tour.o -g -fopenmp -o tsp
