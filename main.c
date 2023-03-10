@@ -20,7 +20,8 @@ typedef struct {
   long contains;
 } queue_elem_t;
 
-queue_elem_t *queue_elem_create(list_t *tour, distance_t cost, distance_t bound, int length, int node, long rtz) {
+queue_elem_t *queue_elem_create(
+    list_t *tour, distance_t cost, distance_t bound, int length, int node, long rtz, long contains) {
   queue_elem_t *elem = (queue_elem_t *) malloc(sizeof(queue_elem_t));
   elem->tour = tour;
   elem->cost = cost;
@@ -28,6 +29,7 @@ queue_elem_t *queue_elem_create(list_t *tour, distance_t cost, distance_t bound,
   elem->length = length;
   elem->node = node;
   elem->rtz = rtz;
+  elem->contains = contains;
   return elem;
 }
 
@@ -161,7 +163,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
 
   distance_t lb = initial_lower_bound(distances);
   priority_queue_t *queue = queue_create(cmp_lb);
-  queue_elem_t *elem = queue_elem_create(tour, 0, lb, 1, 0, rtz);
+  queue_elem_t *elem = queue_elem_create(tour, 0, lb, 1, 0, rtz, 1);
   queue_push(queue, (void *) elem);
 
   while (queue->size > 0) {
@@ -183,7 +185,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     } else {
       for (int v = 0; v < N;  v++) {
         int cost = matrix_get(distances, elem->node, v);
-        if (list_contains(elem->tour, v) || cost == -1) {
+        if (get_bit(elem->contains, v) || cost == -1) {
           continue;
         }
         distance_t new_bound = calculate_new_bound(distances, elem->bound, elem->node, v);
@@ -191,9 +193,10 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
           continue;
         }
         list_t *new_tour = list_append(elem->tour, v);
+        long new_contains = set_bit(elem->contains, v);
         long new_rtz = elem->rtz;
         distance_t new_cost = elem->cost + matrix_get(distances, elem->node, v);
-        queue_elem_t *new_elem = queue_elem_create(new_tour, new_cost, new_bound, elem->length + 1, v, new_rtz);
+        queue_elem_t *new_elem = queue_elem_create(new_tour, new_cost, new_bound, elem->length + 1, v, new_rtz, new_contains);
 
         new_elem->rtz = set_bit(new_elem->rtz, new_elem->node);
         if (rtz_sum(new_elem->rtz, N) == 0 && new_elem->length != N) {

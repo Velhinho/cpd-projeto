@@ -1,4 +1,4 @@
-cc = gcc -Wall -Wextra -O0 -g -fopenmp
+cc = gcc -Wall -Wextra -O3 -fopenmp
 
 main: matrix.o queue.o list.o
 	$(cc) main.c matrix.o queue.o list.o -o tsp
