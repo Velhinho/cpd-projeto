@@ -16,10 +16,11 @@ typedef struct {
   distance_t bound;
   int length;
   int node;
-  list_t *rtz;
+  long rtz;
+  long contains;
 } queue_elem_t;
 
-queue_elem_t *queue_elem_create(list_t *tour, distance_t cost, distance_t bound, int length, int node, list_t *rtz) {
+queue_elem_t *queue_elem_create(list_t *tour, distance_t cost, distance_t bound, int length, int node, long rtz) {
   queue_elem_t *elem = (queue_elem_t *) malloc(sizeof(queue_elem_t));
   elem->tour = tour;
   elem->cost = cost;
@@ -39,7 +40,6 @@ void queue_elem_print(queue_elem_t *elem) {
 
 void queue_elem_free(queue_elem_t *elem) {
   list_free(elem->tour);
-  list_free(elem->rtz);
   free(elem);
 }
 
@@ -124,33 +124,40 @@ void queue_delete_all(priority_queue_t *queue) {
   queue_delete(queue);
 }
 
-list_t *rtz_init(matrix_t *distances) {
-  list_t *rtz = list_empty();
+long get_bit(long bits, long index) {
+  long mask = 1 << index;
+  return bits & mask;
+}
+
+long set_bit(long bits, long index) {
+  long mask = 1 << index;
+  return bits | mask;
+}
+
+long rtz_init(matrix_t *distances) {
+  long rtz = 0;
   int num_columns = matrix_num_columns(distances);
   for (int i = 0; i < num_columns; i++) {
     double elem = matrix_get(distances, 0, i);
-    if (elem == -1) {
-      list_insert(rtz, 0);
-    } else {
-      list_insert(rtz, 1);
+    if (elem != -1) {
+      rtz = set_bit(rtz, i);
     }
   }
   return rtz;
 }
 
-int rtz_sum(list_t *rtz) {
+int rtz_sum(long rtz, int n) {
   int sum = 0;
-  int count = list_count(rtz);
-  for (int i = 0; i < count; i++) {
-    sum += list_element(rtz, i);
-  }
+  for (int i = 0; i < n; i++)
+    if (get_bit(rtz, i))
+      sum++;
   return sum;
 }
 
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   list_t *tour = list_singleton(0);
   list_t *best_tour = list_empty();
-  list_t *rtz = rtz_init(distances);
+  long rtz = rtz_init(distances);
 
   distance_t lb = initial_lower_bound(distances);
   priority_queue_t *queue = queue_create(cmp_lb);
@@ -184,12 +191,12 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
           continue;
         }
         list_t *new_tour = list_append(elem->tour, v);
-        list_t *new_rtz = list_copy(elem->rtz);
+        long new_rtz = elem->rtz;
         distance_t new_cost = elem->cost + matrix_get(distances, elem->node, v);
         queue_elem_t *new_elem = queue_elem_create(new_tour, new_cost, new_bound, elem->length + 1, v, new_rtz);
 
-        list_change_element(new_elem->rtz, new_elem->node, 0);
-        if (rtz_sum(new_elem->rtz) == 0 && new_elem->length != N) {
+        new_elem->rtz = set_bit(new_elem->rtz, new_elem->node);
+        if (rtz_sum(new_elem->rtz, N) == 0 && new_elem->length != N) {
           queue_elem_free(new_elem);
           continue;
         }
