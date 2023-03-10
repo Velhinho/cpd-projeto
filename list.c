@@ -28,11 +28,13 @@ list_t *list_singleton(int element) {
 }
 
 list_t *list_copy(list_t *list) {
+  int *array_copy = (int *) malloc(sizeof(int) * list->capacity);
+  memcpy(array_copy, list->elements, sizeof(int) * list->capacity);
+
   list_t *new_list = list_empty();
-  int count = list_count(list);
-  for (int i = 0; i < count; i++) {
-    list_insert(new_list, list_element(list, i));
-  }
+  new_list->elements = array_copy;
+  new_list->capacity = list->capacity;
+  new_list->count = list->count;
   return new_list;
 }
 

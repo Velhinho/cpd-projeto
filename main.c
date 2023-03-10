@@ -8,6 +8,7 @@
 typedef struct {
   list_t *best_tour;
   distance_t best_tour_cost;
+  priority_queue_t *queue;
 } tsp_ret_t;
 
 typedef struct {
@@ -163,9 +164,8 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     //queue_elem_print(elem);
     //printf("\n");
     if (elem->bound >= best_tour_cost) {
-      tsp_ret_t ret = { best_tour, best_tour_cost };
+      tsp_ret_t ret = { best_tour, best_tour_cost, queue };
       queue_elem_free(elem);
-      queue_delete_all(queue);
       return ret;
     }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
@@ -200,8 +200,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     }
     queue_elem_free(elem);
   }
-  tsp_ret_t ret = { best_tour, best_tour_cost };
-  queue_delete_all(queue);
+  tsp_ret_t ret = { best_tour, best_tour_cost, queue };
   return ret;
 }
 
@@ -220,12 +219,14 @@ int main(int argc, char **argv) {
   double exec_time = -omp_get_wtime();
   tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
   exec_time += omp_get_wtime();
+
+  queue_delete_all(ret.queue);
   fprintf(stderr, "%.lfs\n", exec_time);
 
   if (ret.best_tour == NULL || list_count(ret.best_tour) != n + 1) {
     printf("NO SOLUTION\n");
   } else {
-    printf("%lf\n", ret.best_tour_cost);
+    printf("%.1lf\n", ret.best_tour_cost);
     list_print(ret.best_tour);
   }
   list_free(ret.best_tour);

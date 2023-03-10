@@ -15,4 +15,5 @@ matrix.o:
 clean:
 	rm *.o
 	rm *.h.gch
+	rm nqueue/queue.h.gch
 	rm tsp
