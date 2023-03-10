@@ -148,14 +148,6 @@ long rtz_init(matrix_t *distances) {
   return rtz;
 }
 
-int rtz_sum(long rtz, int n) {
-  int sum = 0;
-  for (int i = 0; i < n; i++)
-    if (get_bit(rtz, i))
-      sum++;
-  return sum;
-}
-
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   list_t *tour = list_singleton(0);
   list_t *best_tour = list_empty();
@@ -199,7 +191,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
         queue_elem_t *new_elem = queue_elem_create(new_tour, new_cost, new_bound, elem->length + 1, v, new_rtz, new_contains);
 
         new_elem->rtz = set_bit(new_elem->rtz, new_elem->node);
-        if (rtz_sum(new_elem->rtz, N) == 0 && new_elem->length != N) {
+        if (new_elem->rtz == 0 && new_elem->length != N) {
           queue_elem_free(new_elem);
           continue;
         }
