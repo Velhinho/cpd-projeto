@@ -1,11 +1,5 @@
 #include "matrix.h"
 
-struct matrix {
-  int num_rows;
-  int num_columns;
-  distance_t **matrix_elements;
-};
-
 matrix_t *matrix_create(int rows, int columns, distance_t default_val) {
   matrix_t *matrix = (matrix_t *) malloc(sizeof(matrix_t));
   matrix->num_columns = columns;
@@ -32,14 +26,6 @@ void matrix_free(matrix_t *matrix) {
   }
   free(matrix->matrix_elements);
   free(matrix);
-}
-
-distance_t matrix_get(matrix_t *matrix, int row, int column) {
-  return matrix->matrix_elements[row][column];
-}
-
-void matrix_set(matrix_t *matrix, int row, int column, distance_t value) {
-  matrix->matrix_elements[row][column] = value;
 }
 
 int matrix_num_rows(matrix_t *matrix) {

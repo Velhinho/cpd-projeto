@@ -4,15 +4,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define matrix_get(m,r,c) (m->matrix_elements[r][c])
+#define matrix_set(m,r,c,v) (m->matrix_elements[r][c] = v)
 
-typedef struct matrix matrix_t;
 typedef double distance_t;
+
+typedef struct {
+  int num_rows;
+  int num_columns;
+  distance_t **matrix_elements;
+} matrix_t;
 
 matrix_t *matrix_create(int rows, int columns, distance_t default_val);
 void matrix_free(matrix_t *matrix);
 
-distance_t matrix_get(matrix_t *matrix, int row, int column);
-void matrix_set(matrix_t *matrix, int row, int column, distance_t value);
 int matrix_num_rows(matrix_t *matrix);
 int matrix_num_columns(matrix_t *matrix);
 
