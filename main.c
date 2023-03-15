@@ -71,6 +71,7 @@ matrix_t *make_matrix_from_file(FILE *fp) {
 }
 
 distance_t worst_cost;
+matrix_t *mins;
 
 void min(matrix_t *distances, int node, distance_t *mins) {
   mins[0] = worst_cost;
@@ -87,11 +88,15 @@ void min(matrix_t *distances, int node, distance_t *mins) {
 }
 
 distance_t initial_lower_bound(matrix_t *distances) {
-  distance_t mins[2];
+  int num_columns = matrix_num_columns(distances);
+  mins = matrix_create(num_columns, 2, -1);
+  for (int i = 0; i < num_columns; i++) {
+    min(distances, i, mins->matrix_elements[i]);
+  }
+
   distance_t lb = 0;
-  for (int i = 0; i < matrix_num_columns(distances); i++) {
-    min(distances, i, mins);
-    lb += mins[0] + mins[1];
+  for (int i = 0; i < num_columns; i++) {
+    lb += matrix_get(mins, i, 0) + matrix_get(mins, i, 1);
   }
   return lb / 2;
 }
@@ -110,12 +115,13 @@ char cmp_lb(void *queue_elem1, void *queue_elem2) {
   }
 }
 
+distance_t get_min(distance_t lb, int node) {
+  return lb >= matrix_get(mins, node, 1) ? matrix_get(mins, node, 1) : matrix_get(mins, node, 0);
+}
+
 distance_t calculate_new_bound(matrix_t *distances, distance_t lb, int f, int t) {
-  distance_t mins[2];
-  min(distances, f, mins);
-  distance_t cf = matrix_get(distances, f, t) >= mins[1] ? mins[1] : mins[0];
-  min(distances, t, mins);
-  distance_t ct = matrix_get(distances, f, t) >= mins[1] ? mins[1]: mins[0];
+  distance_t cf = get_min(matrix_get(distances, f, t), f);
+  distance_t ct = get_min(matrix_get(distances, f, t), t);
   return lb + matrix_get(distances, f, t) - (cf + ct) / 2;
 }
 
