@@ -1,0 +1,6 @@
+serial:
+gen20 - 76s
+gen22 - 145s
+gen24 - 35s
+gen26 - 69s
+gen30 - 247s

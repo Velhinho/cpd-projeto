@@ -237,5 +237,6 @@ int main(int argc, char **argv) {
   }
   list_free(ret.best_tour);
   matrix_free(distances);
+  matrix_free(mins);
   fclose(fp);
 }
