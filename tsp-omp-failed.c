@@ -191,6 +191,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     if (elem->bound >= best_tour_cost) {
       ret.best_tour = best_tour;
       ret.best_tour_cost = best_tour_cost;
+      return ret;
     }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
       if (elem->cost + matrix_get(distances, elem->node, 0) < best_tour_cost) {
@@ -225,30 +226,21 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     queue_elem_free(elem);
   }
 
-  int no_solution = 1;
   priority_queue_t **queues = split_queues(queue, max_threads);
   #pragma omp parallel
-  while (no_solution) {
+  while (queues[omp_get_thread_num()]->size) {
     int thread_id = omp_get_thread_num();
     priority_queue_t *queue = queues[thread_id];
 
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
     //queue_elem_print(elem);
     //printf("\n");
-    if (elem->bound >= best_tour_cost) {
-      ret.best_tour = best_tour;
-      ret.best_tour_cost = best_tour_cost;
-      #pragma omp atomic write
-      no_solution = 0;
-    }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
-      if (elem->cost + matrix_get(distances, elem->node, 0) < best_tour_cost) {
-        #pragma omp critical
-        {
-          list_free(best_tour);
-          best_tour = list_append(elem->tour, 0);
-          best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
-        }
+      #pragma omp critical
+      if (elem->cost + matrix_get(distances, elem->node, 0) < ret.best_tour_cost) {
+        list_free(ret.best_tour);
+        ret.best_tour = list_append(elem->tour, 0);
+        ret.best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
       }
     } else {
       for (int v = 0; v < N;  v++) {
@@ -257,7 +249,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
           continue;
         }
         distance_t new_bound = calculate_new_bound(distances, elem->bound, elem->node, v);
-        if (new_bound > best_tour_cost) {
+        if (new_bound > ret.best_tour_cost) {
           continue;
         }
         list_t *new_tour = list_append(elem->tour, v);
