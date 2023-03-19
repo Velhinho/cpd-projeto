@@ -4,3 +4,8 @@ gen22 - 145s
 gen24 - 35s
 gen26 - 69s
 gen30 - 247s
+
+openMP: has wrong solutions for gen15 and gen19
+gen30, OMP_NUM_THREADS=2 - 163s
+gen30, OMP_NUM_THREADS=4 - 13s
+gen30, OMP_NUM_THREADS=8 - 3s

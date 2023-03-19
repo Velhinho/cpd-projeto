@@ -1,7 +1,7 @@
-cc = gcc -Wall -Wextra -O3 -g -fopenmp
+cc = gcc -Wall -Wextra -O0 -g -fopenmp
 
 main: matrix.o queue.o list.o
-	$(cc) main.c matrix.o queue.o list.o -o tsp
+	$(cc) tsp-omp-failed.c matrix.o queue.o list.o -o tsp
 
 queue.o:
 	$(cc) nqueue/queue.c nqueue/queue.h -c
