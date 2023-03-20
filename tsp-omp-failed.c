@@ -182,7 +182,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   queue_push(queue, (void *) elem);
   tsp_ret_t ret = { best_tour, best_tour_cost };
 
-  while (queue->size > 0 && queue->size < max_threads) {
+  while (queue->size > 0 && queue->size < max_threads * 5) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
 
     //queue_elem_print(elem);
