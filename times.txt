@@ -9,5 +9,9 @@ openMP:
 gen20, OMP_NUM_THREADS=4 - 46s
 gen22, OMP_NUM_THREADS=4 - 87s
 gen24, OMP_NUM_THREADS=4 - 55s
-gen26, OMP_NUM_THREADS=4 - 55s
+gen26, OMP_NUM_THREADS=4 - 36s
 gen30, OMP_NUM_THREADS=4 - 140s
+
+speed up between OMP_NUM_THREADS=4 and OMP_NUM_THREADS=8 is very small most of the time
+
+gen24 with OMP_NUM_THREADS=8 returns KILLED

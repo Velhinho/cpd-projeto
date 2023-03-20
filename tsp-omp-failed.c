@@ -8,7 +8,6 @@
 typedef struct {
   list_t *best_tour;
   distance_t best_tour_cost;
-  priority_queue_t *queue;
 } tsp_ret_t;
 
 typedef struct {
@@ -181,7 +180,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   priority_queue_t *queue = queue_create(cmp_lb);
   queue_elem_t *elem = queue_elem_create(tour, 0, lb, 1, 0, rtz, 1);
   queue_push(queue, (void *) elem);
-  tsp_ret_t ret = { best_tour, best_tour_cost, queue };
+  tsp_ret_t ret = { best_tour, best_tour_cost };
 
   while (queue->size > 0 && queue->size < max_threads) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
@@ -227,6 +226,8 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   }
 
   priority_queue_t **queues = split_queues(queue, max_threads);
+  queue_delete_all(queue);
+
   #pragma omp parallel
   while (queues[omp_get_thread_num()]->size) {
     int thread_id = omp_get_thread_num();
@@ -287,7 +288,6 @@ int main(int argc, char **argv) {
   tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
   exec_time += omp_get_wtime();
 
-  queue_delete_all(ret.queue);
   fprintf(stderr, "%.lfs\n", exec_time);
 
   if (ret.best_tour == NULL || list_count(ret.best_tour) != n + 1) {
