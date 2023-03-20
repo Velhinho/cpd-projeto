@@ -226,8 +226,6 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   }
 
   priority_queue_t **queues = split_queues(queue, max_threads);
-  list_t *elem_list = list_empty();
-
   queue_delete_all(queue);
   while (queues[omp_get_thread_num()]->size) {
     int num_iterations = 0;
@@ -273,12 +271,15 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     #pragma omp master
     if (num_iterations == 1000) {
       int num_threads = omp_get_num_threads();
-      for (int i = 0; i < num_threads; i++) {
-        void *elem = queue_pop(queues[i]);
+      for (int i = 0; i < num_threads * 5; i++) {
+        void *elem = queue_pop(queues[i % num_threads]);
+        if (elem == NULL) {
+          continue;
+        }
         queue_push(queues[0], elem);
       }
-      for (int i = 0; i < num_threads; i++) {
-        void *elem = queue_pop(queues[0]);
+      for (int i = 0; i < num_threads * 5; i++) {
+        void *elem = queue_pop(queues[i % num_threads]);
         queue_push(queues[i], elem);
       }
       num_iterations = 0;
