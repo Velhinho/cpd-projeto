@@ -171,44 +171,46 @@ priority_queue_t **split_queues(priority_queue_t *queue, int max_threads) {
   return queues;
 }
 
-priority_queue_t volatile *new_queue = NULL;
-linked_t volatile *waiting_queue;
+priority_queue_t *new_queue = NULL;
+priority_queue_t **queues;
+linked_t *waiting_queue;
 int volatile threads_waiting = 0;
-omp_lock_t volatile *termination_lock;
+omp_lock_t termination_lock;
 int volatile awakened_thread = -1;
 int volatile work_remains = 1;
 
-int terminated(priority_queue_t **queues, int max_threads) {
+int terminated(int max_threads) {
   int thread_id = omp_get_thread_num();
   priority_queue_t *my_queue = queues[thread_id];
   if (my_queue->size >= 2 && threads_waiting > 0 && new_queue == NULL) {
-    omp_set_lock(termination_lock);
-    if (my_queue->size >= 2 && threads_waiting > 0 && new_queue == NULL) {
-      priority_queue_t **split = split_queues(my_queue, 2);
-      queue_delete(my_queue);
-      queues[thread_id] = split[0];
-      new_queue = split[1];
-      //SIGNAL new queue
-      awakened_thread = linked_pop(waiting_queue);
+    int got_lock = omp_test_lock(&termination_lock);
+    if (got_lock) {
+      if (my_queue->size >= 2 && threads_waiting > 0 && new_queue == NULL) {
+        priority_queue_t **split = split_queues(my_queue, 2);
+        queue_delete(my_queue);
+        queues[thread_id] = split[0];
+        new_queue = split[1];
+        awakened_thread = linked_pop(waiting_queue);
+      }
+      omp_unset_lock(&termination_lock);
     }
-    omp_unset_lock(termination_lock);
     return 0;
   } else if (my_queue->size != 0) {
     return 0;
   } else {
-    omp_set_lock(termination_lock);
+    omp_set_lock(&termination_lock);
     if (threads_waiting == max_threads - 1) {
       threads_waiting++;
       work_remains = 0;
-      omp_unset_lock(termination_lock);
+      omp_unset_lock(&termination_lock);
       return 1;
     } else {
       threads_waiting++;
       linked_push(waiting_queue, thread_id);
 
-      omp_unset_lock(termination_lock);
+      omp_unset_lock(&termination_lock);
       while (awakened_thread != thread_id && work_remains);
-      omp_set_lock(termination_lock);
+      omp_set_lock(&termination_lock);
 
       if (threads_waiting < max_threads) {
         queue_delete(queues[thread_id]);
@@ -216,10 +218,10 @@ int terminated(priority_queue_t **queues, int max_threads) {
         new_queue = NULL;
         threads_waiting--;
         awakened_thread = -1;
-        omp_unset_lock(termination_lock);
+        omp_unset_lock(&termination_lock);
         return 0;
       } else {
-        omp_unset_lock(termination_lock);
+        omp_unset_lock(&termination_lock);
         return 1;
       }
     }
@@ -227,7 +229,7 @@ int terminated(priority_queue_t **queues, int max_threads) {
 }
 
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
-  omp_init_lock(termination_lock);
+  omp_init_lock(&termination_lock);
   waiting_queue = linked_empty();
   size_t max_threads = omp_get_max_threads();
 
@@ -241,7 +243,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   queue_push(queue, (void *) elem);
   tsp_ret_t ret = { best_tour, best_tour_cost };
 
-  while (queue->size > 0 && queue->size < max_threads) {
+  while (queue->size > 0 && queue->size < max_threads * 4) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
 
     //queue_elem_print(elem);
@@ -284,11 +286,11 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     queue_elem_free(elem);
   }
 
-  priority_queue_t **queues = split_queues(queue, max_threads);
+  queues = split_queues(queue, max_threads);
   queue_delete_all(queue);
 
   #pragma omp parallel
-  while (queues[omp_get_thread_num()]->size) {
+  while (!terminated(max_threads)) {
     int thread_id = omp_get_thread_num();
     priority_queue_t *queue = queues[thread_id];
 
