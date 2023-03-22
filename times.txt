@@ -7,21 +7,26 @@ gen30 - 247s
 
 openMP:
 gen20, OMP_NUM_THREADS=4 - 38s
+gen20, OMP_NUM_THREADS=4 dynamic - 44s
 gen20, OMP_NUM_THREADS=8 - 31s
 gen20, OMP_NUM_THREADS=8 dynamic - 36s
 
 gen22, OMP_NUM_THREADS=4 - 74s
+gen22, OMP_NUM_THREADS=4 dynamic - 78s
 gen22, OMP_NUM_THREADS=8 - 56s
 gen22, OMP_NUM_THREADS=8 dynamic - 43s
 
 gen24, OMP_NUM_THREADS=4 - 48s
+gen24, OMP_NUM_THREADS=4 dynamic - 68s
 gen24, OMP_NUM_THREADS=8 - KILLED
 gen24, OMP_NUM_THREADS=8 dynamic - 64s
 
 gen26, OMP_NUM_THREADS=4 - 27s
+gen26, OMP_NUM_THREADS=4 dynamic - 25s
 gen26, OMP_NUM_THREADS=8 - 19s
 gen26, OMP_NUM_THREADS=8 dynamic - 22s
 
 gen30, OMP_NUM_THREADS=4 - 112s
+gen30, OMP_NUM_THREADS=4 dynamic - 102s
 gen30, OMP_NUM_THREADS=8 - 102s
 gen30, OMP_NUM_THREADS=8 dynamic - 84s
