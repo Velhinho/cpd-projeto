@@ -343,6 +343,7 @@ int main(int argc, char **argv) {
   worst_cost = best_tour_cost;
   FILE *fp = fopen(argv[1], "r");
   matrix_t *distances = make_matrix_from_file(fp);
+  fclose(fp);
   int n = matrix_num_columns(distances);
 
   double exec_time = -omp_get_wtime();
@@ -360,5 +361,4 @@ int main(int argc, char **argv) {
   list_free(ret.best_tour);
   matrix_free(distances);
   matrix_free(mins);
-  fclose(fp);
 }
