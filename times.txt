@@ -1,32 +1,55 @@
 serial:
+gen19 - 3s
 gen20 - 76s
 gen22 - 145s
 gen24 - 35s
 gen26 - 69s
 gen30 - 247s
 
-openMP:
-gen20, OMP_NUM_THREADS=4 - 38s
-gen20, OMP_NUM_THREADS=4 dynamic - 44s
-gen20, OMP_NUM_THREADS=8 - 31s
-gen20, OMP_NUM_THREADS=8 dynamic - 36s
 
-gen22, OMP_NUM_THREADS=4 - 74s
-gen22, OMP_NUM_THREADS=4 dynamic - 78s
-gen22, OMP_NUM_THREADS=8 - 56s
-gen22, OMP_NUM_THREADS=8 dynamic - 43s
+openMP, dynamic:
+OMP_NUM_THREADS=1
+gen19 - 3s
+gen20 - 137s
+gen22 - 198s
+gen24 - 102s
+gen26 - 85s
+gen30 - 255s
 
-gen24, OMP_NUM_THREADS=4 - 48s
-gen24, OMP_NUM_THREADS=4 dynamic - 68s
-gen24, OMP_NUM_THREADS=8 - KILLED
-gen24, OMP_NUM_THREADS=8 dynamic - 64s
+OMP_NUM_THREADS=2
+gen19 - 2s
+gen20 - 99s
+gen22 - 123s
+gen24 - 68s
+gen26 - 49s
+gen30 - 138s
 
-gen26, OMP_NUM_THREADS=4 - 27s
-gen26, OMP_NUM_THREADS=4 dynamic - 25s
-gen26, OMP_NUM_THREADS=8 - 19s
-gen26, OMP_NUM_THREADS=8 dynamic - 22s
+OMP_NUM_THREADS=4
+gen20 - 44s
+gen22 - 78s
+gen24 - 68s
+gen26 - 25s
+gen30 - 102s
 
-gen30, OMP_NUM_THREADS=4 - 112s
-gen30, OMP_NUM_THREADS=4 dynamic - 102s
-gen30, OMP_NUM_THREADS=8 - 102s
-gen30, OMP_NUM_THREADS=8 dynamic - 84s
+OMP_NUM_THREADS=8
+gen20 - 36s
+gen22 - 43s
+gen24 - 64s
+gen26 - 22s
+gen30 - 84s
+
+
+openMP, static:
+OMP_NUM_THREADS=4
+gen20 - 38s
+gen22 - 74s
+gen24 - 48s
+gen26 - 27s
+gen30 - 112s
+
+OMP_NUM_THREADS=8
+gen20 - 31s
+gen22 - 56s
+gen24 - KILLED
+gen26 - 19s
+gen30 - 102s
