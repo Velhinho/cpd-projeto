@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include "matrix.h"
 #include "list.h"
+#include "linked.h"
 #include "nqueue/queue.h"
 #include <omp.h>
 
 typedef struct {
   list_t *best_tour;
   distance_t best_tour_cost;
-  priority_queue_t *queue;
 } tsp_ret_t;
 
 typedef struct {
@@ -171,8 +171,68 @@ priority_queue_t **split_queues(priority_queue_t *queue, int max_threads) {
   return queues;
 }
 
+priority_queue_t *new_queue = NULL;
+priority_queue_t **queues;
+linked_t *waiting_queue;
+int volatile threads_waiting = 0;
+omp_lock_t termination_lock;
+int volatile awakened_thread = -1;
+int volatile work_remains = 1;
+
+int terminated(int max_threads) {
+  int thread_id = omp_get_thread_num();
+  priority_queue_t *my_queue = queues[thread_id];
+  if (my_queue->size >= 2 && threads_waiting > 0 && new_queue == NULL) {
+    int got_lock = omp_test_lock(&termination_lock);
+    if (got_lock) {
+      if (my_queue->size >= 2 && threads_waiting > 0 && new_queue == NULL) {
+        priority_queue_t **split = split_queues(my_queue, 2);
+        queue_delete(my_queue);
+        queues[thread_id] = split[0];
+        new_queue = split[1];
+        awakened_thread = linked_pop(waiting_queue);
+      }
+      omp_unset_lock(&termination_lock);
+    }
+    return 0;
+  } else if (my_queue->size != 0) {
+    return 0;
+  } else {
+    omp_set_lock(&termination_lock);
+    if (threads_waiting == max_threads - 1) {
+      threads_waiting++;
+      work_remains = 0;
+      omp_unset_lock(&termination_lock);
+      return 1;
+    } else {
+      threads_waiting++;
+      linked_push(waiting_queue, thread_id);
+
+      omp_unset_lock(&termination_lock);
+      while (awakened_thread != thread_id && work_remains);
+      omp_set_lock(&termination_lock);
+
+      if (threads_waiting < max_threads) {
+        queue_delete(queues[thread_id]);
+        queues[thread_id] = new_queue;
+        new_queue = NULL;
+        threads_waiting--;
+        awakened_thread = -1;
+        omp_unset_lock(&termination_lock);
+        return 0;
+      } else {
+        omp_unset_lock(&termination_lock);
+        return 1;
+      }
+    }
+  }
+}
+
 tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
+  omp_init_lock(&termination_lock);
+  waiting_queue = linked_empty();
   size_t max_threads = omp_get_max_threads();
+
   list_t *tour = list_singleton(0);
   list_t *best_tour = list_empty();
   long rtz = rtz_init(distances);
@@ -181,9 +241,9 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   priority_queue_t *queue = queue_create(cmp_lb);
   queue_elem_t *elem = queue_elem_create(tour, 0, lb, 1, 0, rtz, 1);
   queue_push(queue, (void *) elem);
-  tsp_ret_t ret = { best_tour, best_tour_cost, queue };
+  tsp_ret_t ret = { best_tour, best_tour_cost };
 
-  while (queue->size > 0 && queue->size < max_threads) {
+  while (queue->size > 0 && queue->size < max_threads * 4) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
 
     //queue_elem_print(elem);
@@ -191,7 +251,6 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     if (elem->bound >= best_tour_cost) {
       ret.best_tour = best_tour;
       ret.best_tour_cost = best_tour_cost;
-      queue_elem_free(elem);
       return ret;
     }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
@@ -227,33 +286,23 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     queue_elem_free(elem);
   }
 
-  int no_solution = 1;
-  priority_queue_t **queues = split_queues(queue, max_threads);
-  tsp_ret_t *rets = (tsp_ret_t *) malloc(sizeof(tsp_ret_t) * max_threads);
-
-  for(size_t i = 0; i < max_threads; i++) {
-    rets[i].best_tour = best_tour;
-    rets[i].best_tour_cost = best_tour_cost;
-    rets[i].queue = queue;
-  }
+  queues = split_queues(queue, max_threads);
+  queue_delete_all(queue);
 
   #pragma omp parallel
-  while (queues[omp_get_thread_num()]->size && no_solution) {
+  while (!terminated(max_threads)) {
     int thread_id = omp_get_thread_num();
     priority_queue_t *queue = queues[thread_id];
 
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
     //queue_elem_print(elem);
     //printf("\n");
-    if (elem->bound >= rets[thread_id].best_tour_cost) {
-      #pragma omp atomic write
-      no_solution = 0;
-    }
     if (elem->length == N && matrix_get(distances, elem->node, 0) != -1) {
-      if (elem->cost + matrix_get(distances, elem->node, 0) < rets[thread_id].best_tour_cost) {
-        list_free(rets[thread_id].best_tour);
-        rets[thread_id].best_tour = list_append(elem->tour, 0);
-        rets[thread_id].best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
+      #pragma omp critical (ret_lock)
+      if (elem->cost + matrix_get(distances, elem->node, 0) < ret.best_tour_cost) {
+        list_free(ret.best_tour);
+        ret.best_tour = list_append(elem->tour, 0);
+        ret.best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
       }
     } else {
       for (int v = 0; v < N;  v++) {
@@ -262,7 +311,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
           continue;
         }
         distance_t new_bound = calculate_new_bound(distances, elem->bound, elem->node, v);
-        if (new_bound > rets[thread_id].best_tour_cost) {
+        if (new_bound > ret.best_tour_cost) {
           continue;
         }
         list_t *new_tour = list_append(elem->tour, v);
@@ -281,14 +330,6 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     }
     queue_elem_free(elem);
   }
-
-  ret = rets[0];
-  for (size_t i = 0; i < max_threads; i++) {
-    printf("%lf\n", rets[i].best_tour_cost);
-    if (ret.best_tour_cost > rets[i].best_tour_cost && list_count(rets[i].best_tour) == N + 1) {
-      ret = rets[i];
-    }
-  }
   return ret;
 }
 
@@ -302,13 +343,13 @@ int main(int argc, char **argv) {
   worst_cost = best_tour_cost;
   FILE *fp = fopen(argv[1], "r");
   matrix_t *distances = make_matrix_from_file(fp);
+  fclose(fp);
   int n = matrix_num_columns(distances);
 
   double exec_time = -omp_get_wtime();
   tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
   exec_time += omp_get_wtime();
 
-  queue_delete_all(ret.queue);
   fprintf(stderr, "%.lfs\n", exec_time);
 
   if (ret.best_tour == NULL || list_count(ret.best_tour) != n + 1) {
@@ -320,5 +361,4 @@ int main(int argc, char **argv) {
   list_free(ret.best_tour);
   matrix_free(distances);
   matrix_free(mins);
-  fclose(fp);
 }
