@@ -25,6 +25,7 @@ gen26 - 49s
 gen30 - 138s
 
 OMP_NUM_THREADS=4
+gen19 - 1s
 gen20 - 44s
 gen22 - 78s
 gen24 - 68s
@@ -32,6 +33,7 @@ gen26 - 25s
 gen30 - 102s
 
 OMP_NUM_THREADS=8
+gen19 - 1s
 gen20 - 36s
 gen22 - 43s
 gen24 - 64s
