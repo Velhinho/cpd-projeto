@@ -1,7 +1,7 @@
-cc = gcc -Wall -Wextra -O3 -g -fopenmp
+cc = mpicc -Wall -Wextra -O0 -g -fopenmp
 
 main: matrix.o queue.o list.o linked.o
-	$(cc) tsp-omp.c matrix.o queue.o list.o linked.o -o tsp
+	$(cc) tsp-mpi.c matrix.o queue.o list.o linked.o -o tsp-mpi
 
 queue.o:
 	$(cc) nqueue/queue.c nqueue/queue.h -c
@@ -19,4 +19,4 @@ clean:
 	rm *.o
 	rm *.h.gch
 	rm nqueue/queue.h.gch
-	rm tsp
+	rm tsp-mpi
