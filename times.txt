@@ -59,3 +59,6 @@ gen30 - 102s
 
 MPI:
 THREADS=4
+gen19 - 1s
+gen20 - 49s
+gen22 - 198s

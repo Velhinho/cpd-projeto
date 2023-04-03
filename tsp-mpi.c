@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <mpi.h>
 
-#define NUM_ELEMS 10
+#define NUM_ELEMS 10000
 #define RECV_RET_TAG 1
 #define RECV_TOUR_TAG 2
 
