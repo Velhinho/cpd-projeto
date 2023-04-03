@@ -1,4 +1,4 @@
-cc = mpicc -Wall -Wextra -O0 -g -fopenmp
+cc = mpicc -Wall -Wextra -O3 -g -fopenmp
 
 main: matrix.o queue.o list.o linked.o
 	$(cc) tsp-mpi.c matrix.o queue.o list.o linked.o -o tsp-mpi
