@@ -1,11 +1,5 @@
 #include "list.h"
 
-struct list {
-  int count;
-  int capacity;
-  int *elements;
-};
-
 list_t *list_empty() {
   list_t *list = (list_t *) malloc(sizeof(list_t));
   list->count = 0;

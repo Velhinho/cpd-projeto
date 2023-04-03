@@ -5,8 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
-
-typedef struct list list_t;
+typedef struct list {
+  int count;
+  int capacity;
+  int *elements;
+} list_t;
 
 list_t *list_empty();
 list_t *list_singleton(int element);

@@ -55,3 +55,7 @@ gen22 - 56s
 gen24 - KILLED
 gen26 - 19s
 gen30 - 102s
+
+
+MPI:
+THREADS=4
