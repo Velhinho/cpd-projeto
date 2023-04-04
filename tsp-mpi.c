@@ -9,6 +9,7 @@
 #define NUM_ELEMS 10000
 #define RECV_RET_TAG 1
 #define RECV_TOUR_TAG 2
+#define BEST_TOUR_COST_TAG 3
 
 typedef struct {
   int *best_tour;
@@ -235,7 +236,20 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   queue_delete(queue);
   queue = new_queue;
 
+  int counter = 0;
   while (queue->size > 0) {
+
+    if (counter == 1000) {
+      MPI_Request request;
+      distance_t recv_best_tour_cost = 0;
+      MPI_Irecv(&recv_best_tour_cost, 1, MPI_DOUBLE, MPI_ANY_SOURCE, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+      if (recv_best_tour_cost != 0 && recv_best_tour_cost < best_tour_cost) {
+        best_tour_cost = recv_best_tour_cost;
+      }
+      counter = 0;
+    } else {
+      counter++;
+    }
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
     //queue_elem_print(elem);
     //printf("\n");
@@ -305,7 +319,7 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   double exec_time = -MPI_Wtime();
 
-  tsp_ret_t best_ret;
+  tsp_ret_t best_ret = { NULL, 0, 0 };
   if (pid == 0) {
     tsp_ret_t *all_rets = malloc(sizeof(tsp_ret_t) * num_procs);
     tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
@@ -329,6 +343,13 @@ int main(int argc, char **argv) {
   } else {
     tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
     printf("%d finished\n", pid);
+
+    MPI_Request request;
+    for (int i = 0; i < num_procs; i++) {
+      if (i != pid) {
+        MPI_Isend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+      }
+    }
     MPI_Send(ret.best_tour, ret.count, MPI_INT, 0, RECV_TOUR_TAG, MPI_COMM_WORLD);
     MPI_Send(&ret, sizeof(tsp_ret_t), MPI_BYTE, 0, RECV_RET_TAG, MPI_COMM_WORLD);
   }
