@@ -241,10 +241,14 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
 
     if (counter == 1000) {
       MPI_Request request;
+      MPI_Status status;
+      int flag;
       distance_t recv_best_tour_cost = 0;
       MPI_Irecv(&recv_best_tour_cost, 1, MPI_DOUBLE, MPI_ANY_SOURCE, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
-      if (recv_best_tour_cost != 0 && recv_best_tour_cost < best_tour_cost) {
+      MPI_Test(&request, &flag, &status);
+      if (recv_best_tour_cost != 0 && recv_best_tour_cost < best_tour_cost && best_tour->count < N + 1) {
         best_tour_cost = recv_best_tour_cost;
+        printf("%d: received new best tour cost %lf\n", pid, best_tour_cost);
       }
       counter = 0;
     } else {
