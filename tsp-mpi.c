@@ -7,9 +7,10 @@
 #include <mpi.h>
 
 #define NUM_ELEMS 10000
-#define RECV_RET_TAG 1
-#define RECV_TOUR_TAG 2
+#define RET_TAG 1
+#define RET_TOUR_TAG 2
 #define BEST_TOUR_COST_TAG 3
+#define BEST_TOUR_TAG 4
 
 typedef struct {
   int *best_tour;
@@ -241,12 +242,11 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
 
     if (counter == 1000) {
       MPI_Request request;
-      MPI_Status status;
       int flag;
       distance_t recv_best_tour_cost = 0;
       MPI_Irecv(&recv_best_tour_cost, 1, MPI_DOUBLE, MPI_ANY_SOURCE, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
-      MPI_Test(&request, &flag, &status);
-      if (recv_best_tour_cost != 0 && recv_best_tour_cost < best_tour_cost && best_tour->count < N + 1) {
+      MPI_Test(&request, &flag, NULL);
+      if (flag && recv_best_tour_cost < best_tour_cost) {
         best_tour_cost = recv_best_tour_cost;
         printf("%d: received new best tour cost %lf\n", pid, best_tour_cost);
       }
@@ -331,15 +331,15 @@ int main(int argc, char **argv) {
     all_rets[0] = ret;
     for (int i = 1; i < num_procs; i++) {
       int *best_tour = malloc(sizeof(int) * (n + 1));
-      MPI_Recv(best_tour, n + 1, MPI_INT, i, RECV_TOUR_TAG, MPI_COMM_WORLD, NULL);
-      MPI_Recv(&all_rets[i], sizeof(tsp_ret_t), MPI_BYTE, i, RECV_RET_TAG, MPI_COMM_WORLD, NULL);
+      MPI_Recv(best_tour, n + 1, MPI_INT, i, RET_TOUR_TAG, MPI_COMM_WORLD, NULL);
+      MPI_Recv(&all_rets[i], sizeof(tsp_ret_t), MPI_BYTE, i, RET_TAG, MPI_COMM_WORLD, NULL);
       all_rets[i].best_tour = best_tour;
     }
 
     best_ret = ret;
     for (int i = 0; i < num_procs; i++) {
       ret = all_rets[i];
-      if (ret.best_tour_cost < best_ret.best_tour_cost) {
+      if (ret.best_tour_cost < best_ret.best_tour_cost && ret.count == n + 1) {
         best_ret = ret;
         printf("best from %d\n", i);
       }
@@ -348,14 +348,14 @@ int main(int argc, char **argv) {
     tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
     printf("%d finished\n", pid);
 
-    MPI_Request request;
     for (int i = 0; i < num_procs; i++) {
+      MPI_Request request;
       if (i != pid) {
-        MPI_Isend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+        MPI_Ibsend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
       }
     }
-    MPI_Send(ret.best_tour, ret.count, MPI_INT, 0, RECV_TOUR_TAG, MPI_COMM_WORLD);
-    MPI_Send(&ret, sizeof(tsp_ret_t), MPI_BYTE, 0, RECV_RET_TAG, MPI_COMM_WORLD);
+    MPI_Send(ret.best_tour, ret.count, MPI_INT, 0, RET_TOUR_TAG, MPI_COMM_WORLD);
+    MPI_Send(&ret, sizeof(tsp_ret_t), MPI_BYTE, 0, RET_TAG, MPI_COMM_WORLD);
   }
   exec_time += MPI_Wtime();
   MPI_Finalize();
