@@ -58,17 +58,25 @@ gen30 - 102s
 
 
 MPI:
-THREADS=2
-gen20 - 38s
-gen22 - 92s
-gen24 - 20s
-gen26 - 44s
-gen30 - 137s
+PROCS=2
+gen20 - 47s
+gen22 - 89s
+gen26 - 113s
+gen30 - 143s
 
-THREADS=4
-gen19 - 1s
-gen20 - 22s
-gen22 - 67s
-gen24 - 14s
-gen26 - 50s
-gen30 - 605s
+PROCS=4
+gen20 - 25s
+gen22 - 45s
+gen26 - 52s
+gen30 - s
+
+PROCS=8
+gen20 - 23s
+gen22 - 108s
+gen26 - 71s
+
+PROCS=16
+gen20 - 18s
+
+PROCS=32
+gen20 - 18s
