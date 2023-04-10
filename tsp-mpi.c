@@ -192,7 +192,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
     //queue_elem_print(elem);
     //printf("\n");
-    if (elem->bound >= best_tour_cost || best_tour_cost > worst_cost) {
+    if (elem->bound >= best_tour_cost) {
       int * best_tour_ret = (int *) malloc(sizeof(int) * (N + 1));
       memcpy(best_tour_ret, best_tour->elements, sizeof(int) * best_tour->count);
       tsp_ret_t ret = { best_tour_ret, best_tour_cost, best_tour->count };
@@ -241,12 +241,6 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   while (queue->size > 0) {
 
     if (counter == 1000) {
-      for (int i = 0; i < num_procs; i++) {
-        MPI_Request request;
-        if (i != pid) {
-          MPI_Isend(&worst_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
-        }
-      }
       MPI_Request request;
       int flag;
       distance_t recv_best_tour_cost = 0;
@@ -263,7 +257,7 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
     //queue_elem_print(elem);
     //printf("\n");
-    if (elem->bound >= best_tour_cost || best_tour_cost > worst_cost) {
+    if (elem->bound >= best_tour_cost) {
       int * best_tour_ret = (int *) malloc(sizeof(int) * (N + 1));
       memcpy(best_tour_ret, best_tour->elements, sizeof(int) * best_tour->count);
       tsp_ret_t ret = { best_tour_ret, best_tour_cost, best_tour->count };
@@ -333,6 +327,7 @@ int main(int argc, char **argv) {
   if (pid == 0) {
     tsp_ret_t *all_rets = malloc(sizeof(tsp_ret_t) * num_procs);
     tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
+    printf("%d finished\n", pid);
     all_rets[0] = ret;
     for (int i = 1; i < num_procs; i++) {
       int *best_tour = malloc(sizeof(int) * (n + 1));
@@ -351,11 +346,12 @@ int main(int argc, char **argv) {
     }
   } else {
     tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
+    printf("%d finished\n", pid);
 
     for (int i = 0; i < num_procs; i++) {
       MPI_Request request;
       if (i != pid) {
-        MPI_Isend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+        MPI_Ibsend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
       }
     }
     MPI_Send(ret.best_tour, ret.count, MPI_INT, 0, RET_TOUR_TAG, MPI_COMM_WORLD);
