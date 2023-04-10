@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <mpi.h>
 
-#define NUM_ELEMS 10000
+#define NUM_ELEMS 1000
 #define RET_TAG 1
 #define RET_TOUR_TAG 2
 #define BEST_TOUR_COST_TAG 3
