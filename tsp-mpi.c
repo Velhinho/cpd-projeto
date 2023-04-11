@@ -168,7 +168,7 @@ int pid, num_procs;
 priority_queue_t *discard(priority_queue_t *queue) {
   priority_queue_t *new_queue = queue_create(cmp_lb);
   int i = 0;
-  while (new_queue->size < NUM_ELEMS) {
+  while (queue->size != 0) {
     queue_elem_t *elem = queue_pop(queue);
     if (i % num_procs == pid) {
       queue_push(new_queue, elem);
@@ -270,6 +270,12 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
         list_free(best_tour);
         best_tour = list_append(elem->tour, 0);
         best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
+        for (int i = 0; i < num_procs; i++) {
+          MPI_Request request;
+          if (i != pid) {
+            MPI_Isend(&best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+          }
+        }
       }
     } else {
       for (int v = 0; v < N;  v++) {
@@ -351,7 +357,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < num_procs; i++) {
       MPI_Request request;
       if (i != pid) {
-        MPI_Ibsend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+        MPI_Isend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
       }
     }
     MPI_Send(ret.best_tour, ret.count, MPI_INT, 0, RET_TOUR_TAG, MPI_COMM_WORLD);
