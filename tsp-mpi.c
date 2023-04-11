@@ -237,27 +237,28 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
   queue_delete(queue);
   queue = new_queue;
 
-  int counter = 0;
-  while (queue->size > 0) {
+  MPI_Request send_req, recv_req;
+  for (int i = 0; i < num_procs; i++) {
+    if (i != pid) {
+      MPI_Isend(&worst_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &send_req);
+    }
+  }
 
-    if (counter == 1000) {
-      MPI_Request request;
-      int flag;
-      distance_t recv_best_tour_cost = 0;
-      MPI_Irecv(&recv_best_tour_cost, 1, MPI_DOUBLE, MPI_ANY_SOURCE, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
-      MPI_Test(&request, &flag, NULL);
-      if (flag && recv_best_tour_cost < best_tour_cost) {
-        best_tour_cost = recv_best_tour_cost;
-        printf("%d: received new best tour cost %lf\n", pid, best_tour_cost);
-      }
-      counter = 0;
-    } else {
-      counter++;
+  distance_t recv_best_tour_cost = 0;
+  MPI_Irecv(&recv_best_tour_cost, 1, MPI_DOUBLE, MPI_ANY_SOURCE, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &recv_req);
+
+  while (queue->size > 0) {
+    int send_flag, recv_flag;
+    MPI_Test(&recv_req, &recv_flag, NULL);
+    if (recv_flag) {
+      printf("%d: received %lf old %lf\n", pid, recv_best_tour_cost, worst_cost);
+      worst_cost = recv_best_tour_cost < worst_cost ? recv_best_tour_cost : worst_cost;
+      MPI_Irecv(&recv_best_tour_cost, 1, MPI_DOUBLE, MPI_ANY_SOURCE, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &recv_req);
     }
     queue_elem_t *elem = (queue_elem_t *) queue_pop(queue);
     //queue_elem_print(elem);
     //printf("\n");
-    if (elem->bound >= best_tour_cost) {
+    if (elem->bound >= best_tour_cost || elem->bound > worst_cost) {
       int * best_tour_ret = (int *) malloc(sizeof(int) * (N + 1));
       memcpy(best_tour_ret, best_tour->elements, sizeof(int) * best_tour->count);
       tsp_ret_t ret = { best_tour_ret, best_tour_cost, best_tour->count };
@@ -270,10 +271,14 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
         list_free(best_tour);
         best_tour = list_append(elem->tour, 0);
         best_tour_cost = elem->cost + matrix_get(distances, elem->node, 0);
-        for (int i = 0; i < num_procs; i++) {
-          MPI_Request request;
-          if (i != pid) {
-            MPI_Isend(&best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+        worst_cost = best_tour_cost;
+        MPI_Test(&send_req, &send_flag, NULL);
+        if (send_flag) {
+          for (int i = 0; i < num_procs; i++) {
+            if (i != pid) {
+              printf("%d found new best_tour_cost %lf, sending\n", pid, best_tour_cost);
+              MPI_Isend(&worst_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &send_req);
+            }
           }
         }
       }
