@@ -59,16 +59,31 @@ gen30 - 102s
 
 MPI:
 THREADS=2
-gen20 - 38s
-gen22 - 92s
-gen24 - 20s
-gen26 - 44s
-gen30 - 137s
+gen20 - 43s
+gen22 - 91s
+gen26 - 38s
+gen30 - 128s
 
 THREADS=4
-gen19 - 1s
-gen20 - 22s
-gen22 - 67s
-gen24 - 14s
-gen26 - 50s
-gen30 - 605s
+gen20 - 24s
+gen22 - 37s
+gen26 - 26s
+gen30 - 161s
+
+THREADS=8
+gen20 - 19s
+gen22 - 169s
+gen26 - 104s
+gen30 - 128s
+
+THREADS=16
+gen20 - 14s
+gen22 - 51s
+gen26 - 43s
+gen30 - 72s
+
+THREADS=32
+gen20 - 8s
+gen22 - 54s
+gen26 - 30s
+gen30 - 252s
