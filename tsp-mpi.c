@@ -274,9 +274,9 @@ tsp_ret_t tspbb(matrix_t *distances, int N, distance_t best_tour_cost) {
         worst_cost = best_tour_cost;
         MPI_Test(&send_req, &send_flag, NULL);
         if (send_flag) {
-          printf("%d found new best_tour_cost %lf, sending\n", pid, best_tour_cost);
           for (int i = 0; i < num_procs; i++) {
             if (i != pid) {
+              printf("%d found new best_tour_cost %lf, sending\n", pid, best_tour_cost);
               MPI_Isend(&worst_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &send_req);
             }
           }
@@ -358,6 +358,13 @@ int main(int argc, char **argv) {
   } else {
     tsp_ret_t ret = tspbb(distances, n, best_tour_cost);
     printf("%d finished\n", pid);
+
+    for (int i = 0; i < num_procs; i++) {
+      MPI_Request request;
+      if (i != pid) {
+        MPI_Isend(&ret.best_tour_cost, 1, MPI_DOUBLE, i, BEST_TOUR_COST_TAG, MPI_COMM_WORLD, &request);
+      }
+    }
     MPI_Send(ret.best_tour, ret.count, MPI_INT, 0, RET_TOUR_TAG, MPI_COMM_WORLD);
     MPI_Send(&ret, sizeof(tsp_ret_t), MPI_BYTE, 0, RET_TAG, MPI_COMM_WORLD);
   }
